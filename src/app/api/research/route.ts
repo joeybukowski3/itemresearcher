@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
 import type { SearchInput, ResearchResult } from "@/types";
+import { generateDemoResult } from "./demo-data";
 
-const anthropic = new Anthropic();
+const isDemoMode = !process.env.ANTHROPIC_API_KEY;
 
 function buildPrompt(input: SearchInput): string {
   const parts: string[] = [];
@@ -81,7 +81,6 @@ function parseResponse(text: string): ResearchResult {
 
   const parsed = JSON.parse(cleaned);
 
-  // Validate and provide defaults for required fields
   return {
     itemName: parsed.itemName || "Unknown Item",
     description: parsed.description || "No description available.",
@@ -124,6 +123,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Demo mode: return realistic mock data without any API calls
+    if (isDemoMode) {
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      const demoResult = generateDemoResult(input);
+      return NextResponse.json({ ...demoResult, _demo: true });
+    }
+
+    // Live mode: call Anthropic API
+    const Anthropic = (await import("@anthropic-ai/sdk")).default;
+    const anthropic = new Anthropic();
     const prompt = buildPrompt(input);
 
     const message = await anthropic.messages.create({
@@ -160,4 +169,8 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : "An unexpected error occurred.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
+}
+
+export async function GET() {
+  return NextResponse.json({ demo: isDemoMode });
 }

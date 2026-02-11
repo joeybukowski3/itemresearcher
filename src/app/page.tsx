@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import SearchForm from "@/components/SearchForm";
 import ResultsDisplay from "@/components/ResultsDisplay";
 import type { SearchInput, ResearchResult } from "@/types";
@@ -9,6 +9,14 @@ export default function Home() {
   const [result, setResult] = useState<ResearchResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/research")
+      .then((res) => res.json())
+      .then((data) => setIsDemoMode(data.demo === true))
+      .catch(() => {});
+  }, []);
 
   async function handleSearch(input: SearchInput) {
     setIsLoading(true);
@@ -29,6 +37,7 @@ export default function Home() {
         return;
       }
 
+      if (data._demo) setIsDemoMode(true);
       setResult(data as ResearchResult);
     } catch {
       setError("Failed to connect to the research service. Please check your connection and try again.");
@@ -39,6 +48,13 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Demo mode banner */}
+      {isDemoMode && (
+        <div className="bg-blue-600 text-white text-center text-sm py-2 px-4">
+          <strong>Demo Mode</strong> — Showing sample data. Add an ANTHROPIC_API_KEY to .env.local for live results.
+        </div>
+      )}
+
       {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
